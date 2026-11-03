@@ -12,7 +12,8 @@ declare module 'claude-code' {
       recent: string[]
       // null follows the `enabled` option; /topic on|off sets it per session.
       enabled: boolean | null
-      mode: 'band' | 'pane'
+      // null follows the `view` option; /topic pane|band sets it per session.
+      mode: 'band' | 'pane' | null
     }
   }
 }

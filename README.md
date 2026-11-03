@@ -41,6 +41,7 @@ Set at install, in `/config`, or with `/plugin configure session-topic@claude-se
 | Option | Default | What it does |
 | --- | --- | --- |
 | `enabled` | `true` | Whether the banner is on when a session starts. `/topic on` and `/topic off` override it for one session. |
+| `view` | `band` | Where the topic shows when a session starts: `band` above the prompt, or `pane` (a sidebar in fullscreen). `/topic band` and `/topic pane` switch it for one session. |
 | `color` | `orange` | `orange`, `blue`, `green`, `yellow`, `violet`, `teal` (taken from your theme), or `none` for plain bold and italic text. |
 | `band_chars` | `80` | Approximate characters per line in the band. A line wider than the terminal is cut anyway. |
 | `pane_chars` | `280` | Approximate characters for the focus text in the pane, which has room for a short paragraph. |

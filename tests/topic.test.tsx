@@ -107,3 +107,34 @@ test('color none draws plain text, not a padded bar', { options: { color: 'none'
   expect((await ui.find({ type: 'Text', text: /Plain/ }))?.text).toBe(' ▌ Plain [pinned]')
   await ui.unmount()
 })
+
+test('view: pane in the config opens the pane at start', { options: { view: 'pane' } }, async ($, on) => {
+  const opened: string[] = []
+  on('command.register', () => ({ value: { command: 'topic' } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('clock.now', () => ({ value: 0 }))
+  on('clock.after', () => ({ value: undefined }))
+  on('ui.open', (_, e) => {
+    opened.push(e.id)
+
+    return { value: { isPlaced: true } }
+  })
+  on('ui.close', () => ({ value: undefined }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  expect(opened).toEqual(['session-topic'])
+  await $.command.run({ command: 'topic', args: 'Docked' })
+  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect((await band.find({ type: 'Text' }))?.text).toBe('engine')
+  await band.unmount()
+
+  await $.command.run({ command: 'topic', args: 'band' })
+  const back = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect((await back.find({ type: 'Text', text: /Docked/ }))?.text).toMatch(/Docked/)
+  await back.unmount()
+})

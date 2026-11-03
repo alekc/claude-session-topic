@@ -12,7 +12,7 @@ const topic = atom({ plugin: 'session-topic', key: 'topic' } as const, null, {
 })
 const recent = atom({ plugin: 'session-topic', key: 'recent' } as const, [])
 const enabled = atom({ plugin: 'session-topic', key: 'enabled' } as const, null)
-const mode = atom({ plugin: 'session-topic', key: 'mode' } as const, 'band')
+const mode = atom({ plugin: 'session-topic', key: 'mode' } as const, null)
 
 // Picker labels from plugin.json mapped to theme keys, so themes still apply.
 const COLORS: Record<string, string | null> = {
@@ -25,8 +25,11 @@ const COLORS: Record<string, string | null> = {
   none: null,
 }
 
+type View = 'band' | 'pane'
+
 type Config = {
   isEnabled: boolean
+  view: View
   color: string | null
   bandChars: number
   paneChars: number
@@ -34,6 +37,10 @@ type Config = {
 
 // The one place options are read; values outside the manifest's bounds throw.
 function parseConfig(options: PluginOptions): Config {
+  const view = String(options.view ?? 'band')
+  if (view !== 'band' && view !== 'pane') {
+    throw new Error(`session-topic: unknown view ${view}`)
+  }
   const color = String(options.color ?? 'orange')
   if (!(color in COLORS)) throw new Error(`session-topic: unknown color ${color}`)
   const num = (key: string, fallback: number, min: number, max: number) => {
@@ -47,6 +54,7 @@ function parseConfig(options: PluginOptions): Config {
 
   return {
     isEnabled: options.enabled !== false,
+    view,
     color: COLORS[color] ?? null,
     bandChars: num('band_chars', 80, 30, 200),
     paneChars: num('pane_chars', 280, 60, 1000),
@@ -55,13 +63,13 @@ function parseConfig(options: PluginOptions): Config {
 
 type Budget = { title: number; detail: number }
 
-function budgetFor(cfg: Config, view: 'band' | 'pane'): Budget {
+function budgetFor(cfg: Config, view: View): Budget {
   return view === 'pane'
     ? { title: Math.max(cfg.bandChars, 80), detail: cfg.paneChars }
     : { title: cfg.bandChars, detail: cfg.bandChars }
 }
 
-function systemPrompt(b: Budget, view: 'band' | 'pane'): string {
+function systemPrompt(b: Budget, view: View): string {
   const room =
     view === 'pane'
       ? `a sidebar pane: line 1 at most ${b.title} characters; line 2 may be` +
@@ -96,6 +104,10 @@ function clean(line: string, max: number): string {
 
 async function isOn($: EngineInterface, cfg: Config): Promise<boolean> {
   return (await read($, enabled)) ?? cfg.isEnabled
+}
+
+async function viewOf($: EngineInterface, cfg: Config): Promise<View> {
+  return (await read($, mode)) ?? cfg.view
 }
 
 // One refresh at a time; a prompt arriving mid-call reruns it once after.
@@ -140,7 +152,7 @@ async function refreshOnce(
   const prompts = await read($, recent)
   if (prompts.length === 0) return
 
-  const view = await read($, mode)
+  const view = await viewOf($, cfg)
   const b = budgetFor(cfg, view)
   const banner = current
     ? `Current banner:\n${current.title}\n${current.detail}` +
@@ -199,6 +211,7 @@ export const register: Register = (on, options) => {
       name: 'topic',
       description: 'Turn on/off, set, pin, refresh or move the session topic banner',
     })
+    if (cfg.view === 'pane' && (await isOn($, cfg))) await openPane($, cfg)
 
     return next(e)
   })
@@ -240,7 +253,7 @@ export const register: Register = (on, options) => {
     }
     if (word === 'on' || word === 'show') {
       await update($, enabled, () => true)
-      if ((await read($, mode)) === 'pane') await openPane($, cfg)
+      if ((await viewOf($, cfg)) === 'pane') await openPane($, cfg)
       if (!(await read($, topic))) await refresh($, cfg)
 
       return { text: 'Topic banner on.' }
@@ -265,7 +278,7 @@ export const register: Register = (on, options) => {
       return { text: t ? `${t.title}\n${t.detail}` : 'Nothing to derive yet.' }
     }
     if (word === 'pane' || word === 'band') {
-      const was = await read($, mode)
+      const was = await viewOf($, cfg)
       await update($, mode, () => word)
       await update($, enabled, () => true)
       if (word === 'pane') await openPane($, cfg)
@@ -282,7 +295,7 @@ export const register: Register = (on, options) => {
     }
 
     const [title, ...rest] = args.split('|')
-    const view = await read($, mode)
+    const view = await viewOf($, cfg)
     const b = budgetFor(cfg, view)
     const pinned: Topic = {
       title: clean(title ?? '', b.title),
@@ -328,7 +341,7 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey || e.props.view.agentId) return next(e)
-    if (!(await isOn($, cfg)) || (await read($, mode)) === 'pane') return next(e)
+    if (!(await isOn($, cfg)) || (await viewOf($, cfg)) === 'pane') return next(e)
     const t = await read($, topic)
     if (!t) return next(e)
 

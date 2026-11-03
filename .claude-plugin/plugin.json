@@ -1,6 +1,6 @@
 {
   "name": "session-topic",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Two-line banner above the prompt naming what this session is about; Haiku keeps it current as the subject changes",
   "author": {
     "name": "Alexander Chernov"
@@ -21,6 +21,16 @@
       "title": "On by default",
       "description": "Show the topic banner when a session starts. /topic on and /topic off override it for one session.",
       "default": true
+    },
+    "view": {
+      "type": "string",
+      "title": "Where to show it",
+      "description": "band is the strip above the prompt; pane is a side pane (a sidebar in fullscreen). /topic band and /topic pane switch it for one session.",
+      "options": [
+        "band",
+        "pane"
+      ],
+      "default": "band"
     },
     "color": {
       "type": "string",
