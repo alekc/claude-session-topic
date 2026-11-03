@@ -48,6 +48,22 @@ Set at install, in `/config`, or with `/plugin configure session-topic@claude-se
 
 The lengths are targets for Haiku, not hard limits: text is cut a little past them.
 
+### Changing settings after install
+
+Settings belong to the installed plugin, not to a version, so you can change them at any time and they are kept across updates. In a session:
+
+```
+/plugin configure session-topic@claude-session-topic
+```
+
+From a shell, `claude plugin configure session-topic@claude-session-topic` lists each option and whether it is set. To set values without prompts, pipe them in as JSON; options you leave out keep their current values:
+
+```
+echo '{"view":"pane"}' | claude plugin configure session-topic@claude-session-topic --values-stdin
+```
+
+An option added in a later version, such as `view` in 0.2.0, starts unset after `claude plugin update` (which needs a restart) and uses its default until you set it.
+
 ## Notes
 
 - Claude Code gives mods no slot at the top of the screen. The band above the prompt is the one fixed place a mod can draw, which is why the banner lives there.
