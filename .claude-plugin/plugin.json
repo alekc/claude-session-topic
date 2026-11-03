@@ -1,0 +1,57 @@
+{
+  "name": "session-topic",
+  "version": "0.1.0",
+  "description": "Two-line banner above the prompt naming what this session is about; Haiku keeps it current as the subject changes",
+  "author": {
+    "name": "Alexander Chernov"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/alekc/claude-session-topic",
+  "repository": "https://github.com/alekc/claude-session-topic",
+  "keywords": [
+    "mod",
+    "banner",
+    "session",
+    "topic"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "On by default",
+      "description": "Show the topic banner when a session starts. /topic on and /topic off override it for one session.",
+      "default": true
+    },
+    "color": {
+      "type": "string",
+      "title": "Colour",
+      "description": "Colour of the banner, taken from your theme. none draws plain bold and italic text.",
+      "options": [
+        "orange",
+        "blue",
+        "green",
+        "yellow",
+        "violet",
+        "teal",
+        "none"
+      ],
+      "default": "orange"
+    },
+    "band_chars": {
+      "type": "number",
+      "title": "Band length (characters per line)",
+      "description": "Approximate characters per line for the band above the prompt. A line wider than the terminal is cut anyway.",
+      "default": 80,
+      "min": 30,
+      "max": 200
+    },
+    "pane_chars": {
+      "type": "number",
+      "title": "Pane length (characters of focus text)",
+      "description": "Approximate characters for the second line when the topic is shown in a pane (/topic pane), which has room for a short paragraph.",
+      "default": 280,
+      "min": 60,
+      "max": 1000
+    }
+  }
+}

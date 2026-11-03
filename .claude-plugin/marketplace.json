@@ -1,0 +1,12 @@
+{
+  "name": "claude-session-topic",
+  "owner": { "name": "Alexander Chernov" },
+  "description": "session-topic: a pinned banner naming what each Claude Code session is about",
+  "plugins": [
+    {
+      "name": "session-topic",
+      "source": "./",
+      "description": "Two-line banner above the prompt naming what this session is about; Haiku keeps it current as the subject changes"
+    }
+  ]
+}
