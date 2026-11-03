@@ -2,7 +2,7 @@
 
 A Claude Code mod that keeps a two-line banner above the prompt saying what the session is about. With several sessions open it tells you which one you are looking at.
 
-Line 1 is the overall subject, line 2 the current focus within it. After each prompt a small Haiku call reads your last few prompts and either leaves the banner alone or rewrites it, so it follows you when the subject changes. The call runs in the background and never holds up your prompt.
+Line 1 is the overall subject, line 2 the current focus within it. After each prompt a small Haiku call reads your last few prompts, slash commands with arguments included (`/devops-task PLE-123` usually names the subject), and the opening of Claude's last reply, then either leaves the banner alone or rewrites it, so it follows you when the subject changes. The call runs in the background and never holds up your prompt.
 
 ## Install
 
@@ -21,6 +21,17 @@ claude plugin install session-topic --marketplace alekc/claude-session-topic
 In the desktop app, where `/plugin` does not run: click + next to the prompt box, then Plugins, Add marketplace with `alekc/claude-session-topic`, then Add plugin.
 
 Answer `y` to add the marketplace, then pick a scope. Needs Claude Code 2.1.287 or later with mods enabled.
+
+## Update
+
+From a shell, refresh the marketplace, then update the plugin:
+
+```
+claude plugin marketplace update claude-session-topic
+claude plugin update session-topic@claude-session-topic
+```
+
+Restart Claude Code afterwards: a running session keeps the version it started with. Your settings are kept across updates.
 
 ## Commands
 
@@ -67,8 +78,8 @@ An option added in a later version, such as `view` in 0.2.0, starts unset after 
 ## Notes
 
 - Claude Code gives mods no slot at the top of the screen. The band above the prompt is the one fixed place a mod can draw, which is why the banner lives there.
-- Cost: one low-effort Haiku completion per prompt, billed to the session's credentials. Slash commands and very short prompts are skipped, and nothing is called while the banner is off.
-- The prompts it reads stay in your session: they go to the same API your session already uses, and the mod stores nothing on disk.
+- Cost: one low-effort Haiku completion per prompt, billed to the session's credentials. `/topic`, slash commands without arguments and very short prompts are skipped, and nothing is called while the banner is off.
+- The prompts and reply openings it reads stay in your session: they go to the same API your session already uses, and the mod stores nothing on disk.
 
 ## Development
 

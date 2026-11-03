@@ -1,6 +1,6 @@
 {
   "name": "session-topic",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Two-line banner above the prompt naming what this session is about; Haiku keeps it current as the subject changes",
   "author": {
     "name": "Alexander Chernov"

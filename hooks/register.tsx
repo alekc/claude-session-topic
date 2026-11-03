@@ -11,6 +11,8 @@ const topic = atom({ plugin: 'session-topic', key: 'topic' } as const, null, {
   shape: 'topic-1',
 })
 const recent = atom({ plugin: 'session-topic', key: 'recent' } as const, [])
+const lastReply = atom({ plugin: 'session-topic', key: 'reply' } as const, null)
+const REPLY_MAX = 300
 const enabled = atom({ plugin: 'session-topic', key: 'enabled' } as const, null)
 const mode = atom({ plugin: 'session-topic', key: 'mode' } as const, null)
 
@@ -84,6 +86,10 @@ function systemPrompt(b: Budget, view: View): string {
     `The banner is shown in ${room}.`,
     'Keep line 1 unless the subject has clearly changed; refresh line 2 when the',
     'focus within the subject moved. If nothing is worth changing, reply SAME.',
+    'A slash command (e.g. "/devops-task PLE-123") often names the subject: when',
+    'the newest request names a different ticket, repo or tool than the banner,',
+    'the subject changed, so rewrite line 1. Requests are intentions, not done',
+    "work: only Claude's reply says what actually happened.",
     'Otherwise reply with exactly two lines, plain text, no labels, no quotes,',
     'no markdown, no trailing period. Never answer the requests themselves.',
   ].join('\n')
@@ -161,10 +167,14 @@ async function refreshOnce(
   const history = prompts
     .map((p, i) => `[${i === prompts.length - 1 ? 'newest' : i + 1}] ${p}`)
     .join('\n\n')
+  const last = await read($, lastReply)
+  const said = last ? `\n\nClaude's last reply, opening:\n${last}` : ''
   const r = await $.model.complete({
     model: MODEL,
     system: systemPrompt(b, view),
-    prompt: `${banner}\n\nThe developer's recent requests, oldest first:\n${history}`,
+    prompt:
+      `${banner}\n\nThe developer's recent requests, oldest first:\n${history}` +
+      said,
     maxTokens: Math.min(1024, 80 + Math.ceil((b.title + b.detail) / 2)),
     effort: 'low',
     timeoutMs: 20_000,
@@ -217,8 +227,15 @@ export const register: Register = (on, options) => {
   })
 
   on('prompt.submit', async ($, e, next) => {
-    const text = e.text.trim()
-    if (!e.command && !e.isMeta && text.length >= 4) {
+    // A command counts when it carries arguments (/devops-task PLE-123), the
+    // strongest subject signal; /topic itself and bare commands are skipped.
+    const cmd = e.command
+    const text = cmd
+      ? cmd.name === 'topic' || !cmd.args.trim()
+        ? ''
+        : `/${cmd.name} ${cmd.args.trim()}`
+      : e.text.trim()
+    if (!e.isMeta && text.length >= 4) {
       const snippet = text.length > 600 ? `${text.slice(0, 600)}…` : text
       await update($, recent, list => [...list, snippet].slice(-RECENT_MAX))
       if (await isOn($, cfg)) {
@@ -232,6 +249,11 @@ export const register: Register = (on, options) => {
   })
 
   on('turn.complete', async ($, e, next) => {
+    const answer = e.answer.trim().replace(/\s+/g, ' ')
+    if (!e.agentId && answer) {
+      const cut = answer.length > REPLY_MAX ? `${answer.slice(0, REPLY_MAX)}…` : answer
+      await update($, lastReply, () => cut)
+    }
     if (isPending) await refresh($, cfg)
 
     return next(e)

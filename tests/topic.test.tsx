@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 const BAND = {
   plugin: 'session-topic',
@@ -77,6 +77,52 @@ test('pin, band, pane, and on/off', async ($, on) => {
   const back = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect((await back.find({ type: 'Text', text: /ESO PR/ }))?.text).toMatch(/ESO PR/)
   await back.unmount()
+})
+
+test('slash commands and the last reply reach Haiku; /topic does not', async ($, on) => {
+  const clock = mock.clock(on)
+  const sent: string[] = []
+  on('command.register', () => ({ value: { command: 'topic' } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+  on('turn.complete', (_, e) => ({ text: e.answer }))
+  on('model.complete', (_, e) => {
+    sent.push(e.prompt)
+    const usage = {
+      input_tokens: 1,
+      output_tokens: 1,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+    }
+
+    return { value: { isAnswered: true, text: 'PLE-4806 rollout\nOpening the PR', usage } }
+  })
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({
+    text: '/devops-task PLE-4806',
+    command: { name: 'devops-task', args: 'PLE-4806' },
+  })
+  await clock.advance(0)
+  await $.prompt.submit({ text: '/topic pane', command: { name: 'topic', args: 'pane' } })
+  await clock.advance(0)
+  await $.turn.complete({
+    answer: 'PR opened:   Airalo/plx-charts#1225.',
+    durationMs: 1,
+    isAborted: false,
+    turnId: 't1',
+    reason: 'completed',
+  })
+  await $.prompt.submit({ text: 'merge it' })
+  await clock.advance(0)
+
+  expect(sent.length).toBe(2)
+  expect(sent[0]).toMatch(/\[newest\] \/devops-task PLE-4806$/)
+  expect(sent[0]).not.toMatch(/\/topic|last reply/)
+  expect(sent[1]).toMatch(/\[newest\] merge it\n\nClaude's last reply, opening:\n/)
+  expect(sent[1]).toMatch(/opening:\nPR opened: Airalo\/plx-charts#1225\.$/)
+  const status = await $.command.run({ command: 'topic', args: '' })
+  expect(status.text).toMatch(/^PLE-4806 rollout\nOpening the PR/)
 })
 
 test(
